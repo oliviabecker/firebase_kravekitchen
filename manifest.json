@@ -1,0 +1,21 @@
+{
+  "name": "Krave Kitchen",
+  "short_name": "Krave",
+  "description": "Save, view, and manage your favorite recipes offline with Krave Kitchen.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#2C4F4F",
+  "theme_color": "#2C4F4F",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
