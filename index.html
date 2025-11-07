@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Krave Kitchen</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2C4F4F">
+<link rel="manifest" href="manifest.json">
+
+
+
+  <!-- icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- css -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="index.html" class="brand-logo">Krave Kitchen</a>
+      <ul id="nav-mobile" class="right hide-on-med-and-down">
+        <li><a href="recipes.html">Recipes</a></li>
+        <li><a href="add.html">Add Recipe</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <div class="container center-align" style="margin-top: 50px;">
+    <h3>Welcome to Krave Kitchen</h3>
+    <p>Save, view, and manage your favorite recipes — anytime, anywhere.</p>
+    <a href="recipes.html" class="btn-large teal">View Recipes</a>
+  </div>
+
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log('Service Worker registered!', reg))
+        .catch(err => console.log('Service Worker failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
