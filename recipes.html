@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipes - Krave Kitchen</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2C4F4F">
+
+  <!-- Google icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="index.html" class="brand-logo">Krave Kitchen</a>
+      <ul id="nav-mobile" class="right hide-on-med-and-down">
+        <li><a href="recipes.html">Recipes</a></li>
+        <li><a href="add.html">Add Recipe</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  
+  <div class="container" style="margin-top: 30px;">
+    <div class="row" id="recipes-container">
+     
+    </div>
+  </div>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+ 
+  <script type="module">
+    import { db, collection, getDocs, addDoc } from './firebase.js';
+    import { getAllRecipes, clearAllRecipes } from './indexedDB.js';
+
+    const container = document.getElementById('recipes-container');
+
+    
+    function isOnline() {
+      return navigator.onLine;
+    }
+
+  
+    const defaultRecipes = [
+      {
+        id: 'spaghetti',
+        title: 'Spaghetti',
+        img: 'images/spaghetti.jpg',
+        ingredients: ['200g spaghetti','1 cup tomato sauce','1/2 cup cheese','Salt & pepper'],
+        instructions: ['Boil spaghetti','Heat sauce','Mix spaghetti with sauce','Sprinkle cheese']
+      },
+      {
+        id: 'pancakes',
+        title: 'Pancakes',
+        img: 'images/pancakes.jpg',
+        ingredients: ['1 cup flour','2 tbsp sugar','1 tsp baking powder','1 cup milk','1 egg'],
+        instructions: ['Mix dry ingredients','Add milk & egg','Cook on pan','Flip & serve']
+      },
+      {
+        id: 'cheesecake',
+        title: 'Cheesecake',
+        img: 'images/cheesecake.jpg',
+        ingredients: ['200g biscuits','100g butter','400g cream cheese','150g sugar','2 eggs'],
+        instructions: ['Crush biscuits & mix with butter','Beat cream cheese with sugar & eggs','Bake','Cool & chill']
+      }
+    ];
+
+    
+    async function loadRecipes() {
+      container.innerHTML = '';
+      let recipes = [];
+
+      if (isOnline()) {
+        try {
+          const snapshot = await getDocs(collection(db, 'recipes'));
+          recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (err) {
+          console.error('Firebase load error:', err);
+          recipes = defaultRecipes;
+        }
+      } else {
+        try {
+          recipes = await getAllRecipes();
+          if (!recipes.length) recipes = defaultRecipes;
+        } catch (err) {
+          console.error('IndexedDB load error:', err);
+          recipes = defaultRecipes;
+        }
+      }
+
+      recipes.forEach(recipe => {
+        const col = document.createElement('div');
+        col.className = 'col s12 m4';
+        col.innerHTML = `
+          <div class="card">
+            <div class="card-image">
+              <img src="${recipe.img}" alt="${recipe.title}">
+              <span class="card-title">${recipe.title}</span>
+            </div>
+            <div class="card-content">
+              <p>${(recipe.ingredients || []).slice(0,3).join(', ')}...</p>
+            </div>
+            <div class="card-action">
+              <a href="recipe.html?id=${recipe.id}" class="btn teal">View Recipe</a>
+            </div>
+          </div>
+        `;
+        container.appendChild(col);
+      });
+    }
+    const recipeImages = {
+  spaghetti: 'images/spaghetti.jpg',
+  pancakes: 'images/pancakes.jpg',
+  cheesecake: 'images/cheesecake.jpg'
+};
+
+recipes.forEach(recipe => {
+  const col = document.createElement('div');
+  col.className = 'col s12 m4';
+  col.innerHTML = `
+    <div class="card">
+      <div class="card-image">
+        <img src="${recipeImages[recipe.id] || 'images/spaghetti.jpg'}" alt="${recipe.title}">
+        <span class="card-title">${recipe.title}</span>
+      </div>
+      <div class="card-content">
+        <p>${(recipe.ingredients || []).slice(0,3).join(', ')}...</p>
+      </div>
+      <div class="card-action">
+        <a href="recipe.html?id=${recipe.id}" class="btn teal">View Recipe</a>
+      </div>
+    </div>
+  `;
+  container.appendChild(col);
+});
+
+
+    
+    async function syncOfflineRecipes() {
+      if (!isOnline()) return;
+      const offlineRecipes = await getAllRecipes();
+
+      for (let r of offlineRecipes) {
+        try {
+          await addDoc(collection(db, 'recipes'), r);
+        } catch (err) {
+          console.error('Sync failed for recipe', r.id, err);
+        }
+      }
+
+      await clearAllRecipes();
+      loadRecipes();
+    }
+
+   
+    window.addEventListener('online', () => {
+      console.log('Back online! Syncing offline recipes...');
+      syncOfflineRecipes();
+      loadRecipes();
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('Offline mode');
+    });
+
+   
+    loadRecipes();
+  </script>
+
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('Service Worker registered!', reg))
+          .catch(err => console.log('Service Worker failed:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>
