@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe - Krave Kitchen</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2C4F4F">
+
+  <!-- Google icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="index.html" class="brand-logo">Krave Kitchen</a>
+      <ul id="nav-mobile" class="right hide-on-med-and-down">
+        <li><a href="recipes.html">Recipes</a></li>
+        <li><a href="add.html">Add Recipe</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  
+  <div class="container" style="margin-top: 30px;">
+    <h4 id="recipe-title">Recipe Name</h4>
+    <img id="recipe-img" src="" alt="" class="responsive-img" style="margin-bottom: 20px;">
+
+    <h5>Ingredients</h5>
+    <ul id="recipe-ingredients"></ul>
+
+    <h5>Instructions</h5>
+    <ol id="recipe-instructions"></ol>
+
+    <div class="row">
+      <div class="col s12">
+        <button id="edit-btn" class="btn orange">Edit Recipe</button>
+        <button id="delete-btn" class="btn red">Delete Recipe</button>
+        <a href="recipes.html" class="btn teal">Back to Recipes</a>
+      </div>
+    </div>
+  </div>
+
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+  
+  <script type="module">
+    import { db, collection, doc, getDoc, updateDoc, deleteDoc } from './firebase.js';
+    import { getRecipe, updateRecipe, deleteRecipe } from './indexedDB.js';
+
+    // Get recipe ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const recipeId = params.get('id');
+
+    let currentRecipe = null;
+
+    function isOnline() { return navigator.onLine; }
+
+    const titleEl = document.getElementById('recipe-title');
+    const imgEl = document.getElementById('recipe-img');
+    const ingredientsEl = document.getElementById('recipe-ingredients');
+    const instructionsEl = document.getElementById('recipe-instructions');
+
+    // Load recipe 
+    async function loadRecipe() {
+      if (isOnline()) {
+        const docRef = doc(db, 'recipes', recipeId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          currentRecipe = { firebaseId: docSnap.id, ...docSnap.data() };
+        } else {
+          M.toast({html: 'Recipe not found online!', classes:'red'});
+          return;
+        }
+      } else {
+        currentRecipe = await getRecipe(recipeId);
+        if (!currentRecipe) {
+          M.toast({html: 'Recipe not found offline!', classes:'red'});
+          return;
+        }
+      }
+      const recipeImages = {
+  spaghetti: 'images/spaghetti.jpg',
+  pancakes: 'images/pancakes.jpg',
+  cheesecake: 'images/cheesecake.jpg'
+};
+
+// In loadRecipe():
+imgEl.src = recipeImages[recipeId] || 'images/spaghetti.jpg';
+imgEl.alt = currentRecipe.title;
+
+
+      // Populate page
+      titleEl.textContent = currentRecipe.title;
+      imgEl.src = currentRecipe.img || 'images/spaghetti.jpg';
+      imgEl.alt = currentRecipe.title;
+
+      ingredientsEl.innerHTML = '';
+      currentRecipe.ingredients.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ingredientsEl.appendChild(li);
+      });
+
+      instructionsEl.innerHTML = '';
+      currentRecipe.instructions.forEach(step => {
+        const li = document.createElement('li');
+        li.textContent = step;
+        instructionsEl.appendChild(li);
+      });
+    }
+
+    // Edit recipe
+    document.getElementById('edit-btn').addEventListener('click', async () => {
+      const newTitle = prompt('Enter new title', currentRecipe.title);
+      if (!newTitle) return;
+      currentRecipe.title = newTitle;
+
+      const newIngredients = prompt('Enter ingredients (comma separated)', currentRecipe.ingredients.join(', '));
+      if (!newIngredients) return;
+      currentRecipe.ingredients = newIngredients.split(',').map(s => s.trim());
+
+      const newInstructions = prompt('Enter instructions (comma separated)', currentRecipe.instructions.join(', '));
+      if (!newInstructions) return;
+      currentRecipe.instructions = newInstructions.split(',').map(s => s.trim());
+
+      if (isOnline() && currentRecipe.firebaseId) {
+        await updateDoc(doc(db, 'recipes', currentRecipe.firebaseId), currentRecipe);
+        M.toast({html:'Recipe updated online!', classes:'green'});
+      } else {
+        await updateRecipe(currentRecipe);
+        M.toast({html:'Recipe updated offline!', classes:'orange'});
+      }
+
+      loadRecipe();
+    });
+
+    // Delete recipe
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete this recipe?')) return;
+
+      if (isOnline() && currentRecipe.firebaseId) {
+        await deleteDoc(doc(db, 'recipes', currentRecipe.firebaseId));
+        M.toast({html:'Recipe deleted online!', classes:'green'});
+      } else {
+        await deleteRecipe(currentRecipe.id);
+        M.toast({html:'Recipe deleted offline!', classes:'orange'});
+      }
+
+      window.location.href = 'recipes.html';
+    });
+
+    loadRecipe();
+
+    // Sync offline changes when online
+    window.addEventListener('online', loadRecipe);
+  </script>
+
+ 
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('Service Worker registered!', reg))
+          .catch(err => console.log('Service Worker failed:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>
+
+
